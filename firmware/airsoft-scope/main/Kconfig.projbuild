@@ -1,0 +1,133 @@
+menu "Airsoft scope configuration"
+
+choice AIRSOFT_SCOPE_MODE
+    prompt "Operating mode"
+    default AIRSOFT_SCOPE_MODE_SIMULATION
+
+config AIRSOFT_SCOPE_MODE_SIMULATION
+    bool "Simulation (no radar hardware)"
+    help
+        Generate synthetic radar targets for development on a bare ESP32-S3.
+
+config AIRSOFT_SCOPE_MODE_LIVE
+    bool "Live LD2450 radar"
+    help
+        Read target reports from a connected HLK-LD2450 over UART.
+
+endchoice
+
+config AIRSOFT_LD2450_UART_NUM
+    int "LD2450 UART port"
+    range 0 2
+    default 1
+
+config AIRSOFT_LD2450_TX_GPIO
+    int "LD2450 TX GPIO (ESP32 -> radar RX)"
+    range 0 48
+    default 1 if AIRSOFT_CAMERA_BOARD_S3_CAM
+    default 18
+
+config AIRSOFT_LD2450_RX_GPIO
+    int "LD2450 RX GPIO (radar TX -> ESP32)"
+    range 0 48
+    default 14 if AIRSOFT_CAMERA_BOARD_S3_CAM
+    default 17
+
+config AIRSOFT_LD2450_BAUD
+    int "LD2450 UART baud rate"
+    default 256000
+
+config AIRSOFT_DISPLAY_WIDTH
+    int "Display width (pixels)"
+    default 320
+
+config AIRSOFT_DISPLAY_HEIGHT
+    int "Display height (pixels)"
+    default 240
+
+choice AIRSOFT_DISPLAY_ROTATION
+    prompt "Display rotation"
+    default AIRSOFT_DISPLAY_ROTATION_0
+    help
+        Rotate the rendered image to match how the unit is mounted in its
+        housing. 0/180 keep the native 320x240 landscape; 90/270 produce a
+        240x320 portrait image (rotated in software).
+
+config AIRSOFT_DISPLAY_ROTATION_0
+    bool "0 deg (landscape)"
+
+config AIRSOFT_DISPLAY_ROTATION_90
+    bool "90 deg (portrait)"
+
+config AIRSOFT_DISPLAY_ROTATION_180
+    bool "180 deg (landscape, flipped)"
+
+config AIRSOFT_DISPLAY_ROTATION_270
+    bool "270 deg (portrait, flipped)"
+
+endchoice
+
+config AIRSOFT_CAMERA_HFOV_DEG
+    int "Camera horizontal field of view (degrees)"
+    range 30 120
+    default 66
+    help
+        Used to map radar bearings onto the camera overlay. Calibrate in the field.
+
+config AIRSOFT_RADAR_HFOV_DEG
+    int "Radar horizontal field of view (degrees)"
+    range 30 120
+    default 90
+    help
+        LD2461 spec: ±45° horizontal (90° total).
+
+config AIRSOFT_MAX_RANGE_M
+    int "Maximum overlay range (metres)"
+    range 1 12
+    default 8
+
+config AIRSOFT_SERIAL_PREVIEW
+    bool "Print ASCII overlay preview on USB serial"
+    default y
+
+choice AIRSOFT_CAMERA_BOARD
+    prompt "Camera board"
+    default AIRSOFT_CAMERA_BOARD_NONE
+
+config AIRSOFT_CAMERA_BOARD_NONE
+    bool "No camera (radar + serial preview only)"
+    help
+        Use until an ESP32-S3-CAM board is wired. Radar overlay math still runs.
+
+config AIRSOFT_CAMERA_BOARD_S3_CAM
+    bool "ESP32-S3-CAM (Freenove / OV2640 DVP preset)"
+    help
+        Enables live OV2640 capture and composites radar blips on each frame.
+
+endchoice
+
+config AIRSOFT_DEBUG_WIFI_STREAM
+    bool "Enable Wi-Fi debug camera stream"
+    default n
+    help
+        Join a 2.4 GHz network and serve the current display frame as JPEG
+        (GET /jpg) and MJPEG (GET /stream). For bench debugging only.
+
+config AIRSOFT_WIFI_SSID
+    string "Wi-Fi SSID (2.4 GHz)"
+    depends on AIRSOFT_DEBUG_WIFI_STREAM
+    default ""
+
+config AIRSOFT_WIFI_PASS
+    string "Wi-Fi password"
+    depends on AIRSOFT_DEBUG_WIFI_STREAM
+    default ""
+
+config AIRSOFT_MIN_RANGE_M
+    int "Ignore radar contacts closer than (cm)"
+    range 50 300
+    default 120
+    help
+        Suppresses self-clutter and muzzle-adjacent noise. Value is centimetres.
+
+endmenu

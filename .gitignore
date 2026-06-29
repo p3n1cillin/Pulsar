@@ -1,0 +1,9 @@
+# ESP-IDF build output
+firmware/airsoft-scope/build/
+firmware/airsoft-scope/managed_components/
+firmware/airsoft-scope/sdkconfig
+firmware/airsoft-scope/sdkconfig.old
+
+# Editor / OS
+*.swp
+.DS_Store
