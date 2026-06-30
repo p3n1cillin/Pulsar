@@ -5,7 +5,6 @@
 void scope_ui_init(int width, int height);
 void scope_ui_composite(
     const airsoft_overlay_t *overlay,
-    const airsoft_radar_frame_t *frame,
     uint16_t *live_frame,
     int live_width,
     int live_height);

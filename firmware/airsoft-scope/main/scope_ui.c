@@ -157,7 +157,6 @@ void scope_ui_init(int width, int height) {
 
 void scope_ui_composite(
     const airsoft_overlay_t *overlay,
-    const airsoft_radar_frame_t *frame,
     uint16_t *live_frame,
     int live_width,
     int live_height) {
@@ -173,7 +172,6 @@ void scope_ui_composite(
         present(ui_fb);
     }
 
-    (void)frame;
 }
 
 void scope_ui_render_scope(const airsoft_overlay_t *overlay) {
@@ -218,14 +216,34 @@ void scope_ui_serial_preview(const airsoft_overlay_t *overlay) {
         if (!overlay->blips[i].valid) {
             continue;
         }
-        ESP_LOGI(
-            TAG,
-            "contact %u: %.1fm @ %.0f deg -> screen (%d,%d) [behind cover]",
-            (unsigned)(i + 1),
-            overlay->blips[i].range_m,
-            overlay->blips[i].bearing_deg,
-            overlay->blips[i].x,
-            overlay->blips[i].y);
+        const uint8_t sources = overlay->blips[i].source_flags;
+        const char *source = (sources & AIRSOFT_TRACK_SOURCE_PREDICTED) ? "predicted"
+            : ((sources & AIRSOFT_TRACK_SOURCE_RADAR) &&
+               (sources & AIRSOFT_TRACK_SOURCE_CAMERA)) ? "radar+camera"
+            : (sources & AIRSOFT_TRACK_SOURCE_RADAR) ? "radar"
+            : "camera";
+        if (overlay->blips[i].range_valid) {
+            ESP_LOGI(
+                TAG,
+                "track %u: %.1fm @ %.0f deg -> (%d,%d), %s, confidence %.0f%%",
+                (unsigned)overlay->blips[i].track_id,
+                overlay->blips[i].range_m,
+                overlay->blips[i].bearing_deg,
+                overlay->blips[i].x,
+                overlay->blips[i].y,
+                source,
+                overlay->blips[i].confidence * 100.0f);
+        } else {
+            ESP_LOGI(
+                TAG,
+                "track %u: %.0f deg -> (%d,%d), %s (range unknown), confidence %.0f%%",
+                (unsigned)overlay->blips[i].track_id,
+                overlay->blips[i].bearing_deg,
+                overlay->blips[i].x,
+                overlay->blips[i].y,
+                source,
+                overlay->blips[i].confidence * 100.0f);
+        }
     }
 #else
     (void)overlay;

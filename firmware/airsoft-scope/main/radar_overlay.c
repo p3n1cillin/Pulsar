@@ -10,46 +10,48 @@ static float clampf(float value, float min_value, float max_value) {
 }
 
 void radar_overlay_project(
-    const airsoft_radar_frame_t *frame,
+    const airsoft_track_frame_t *frame,
     int display_width,
     int display_height,
     float camera_hfov_deg,
-    float radar_hfov_deg,
     float max_range_m,
     airsoft_overlay_t *overlay) {
     overlay->count = 0;
 
-    if (!frame) {
+    if (!frame || display_width <= 0 || display_height <= 0 ||
+        camera_hfov_deg <= 0.0f || max_range_m <= 0.0f) {
         return;
     }
 
-    const float min_range_m = (float)CONFIG_AIRSOFT_MIN_RANGE_M / 100.0f;
     const float half_camera = camera_hfov_deg * 0.5f;
-    const float half_radar = radar_hfov_deg * 0.5f;
     const float pixels_per_deg = (float)display_width / camera_hfov_deg;
 
     for (uint8_t i = 0; i < frame->count && overlay->count < AIRSOFT_MAX_TARGETS; ++i) {
-        if (!frame->targets[i].valid) {
-            continue;
-        }
-
-        const float x = frame->targets[i].x_m;
-        const float y = frame->targets[i].y_m;
-        const float range = hypotf(x, y);
-        if (range < min_range_m || range > max_range_m) {
-            continue;
-        }
-
-        const float bearing = atan2f(x, y) * (180.0f / (float)M_PI);
-        if (fabsf(bearing) > half_radar) {
+        const airsoft_track_t *track = &frame->tracks[i];
+        if (!track->valid) {
             continue;
         }
 
         airsoft_overlay_blip_t *blip = &overlay->blips[overlay->count++];
-        blip->bearing_deg = bearing;
-        blip->range_m = range;
-        blip->x = (int16_t)lroundf((bearing + half_camera) * pixels_per_deg);
-        blip->y = (int16_t)lroundf((float)display_height * (1.0f - clampf(range / max_range_m, 0.0f, 1.0f)));
+        const float projected_x = (track->bearing_deg + half_camera) * pixels_per_deg;
+        blip->offscreen = projected_x < 0.0f || projected_x >= (float)display_width;
+        blip->x = (int16_t)lroundf(clampf(projected_x, 7.0f, (float)display_width - 8.0f));
+        if (track->range_valid) {
+            blip->y = (int16_t)lroundf(
+                (float)display_height *
+                (1.0f - clampf(track->range_m / max_range_m, 0.0f, 1.0f)));
+        } else {
+            blip->y = (int16_t)lroundf(clampf(
+                (float)track->image_y, 7.0f, (float)display_height - 8.0f));
+        }
+        blip->box_width = track->image_width;
+        blip->box_height = track->image_height;
+        blip->bearing_deg = track->bearing_deg;
+        blip->range_m = track->range_m;
+        blip->confidence = track->confidence;
+        blip->track_id = track->id;
+        blip->source_flags = track->source_flags;
+        blip->range_valid = track->range_valid;
         blip->valid = true;
     }
 }

@@ -79,7 +79,15 @@ config AIRSOFT_RADAR_HFOV_DEG
     range 30 120
     default 90
     help
-        LD2461 spec: ±45° horizontal (90° total).
+        LD2450 usable horizontal field used to reject side-lobe contacts.
+
+config AIRSOFT_RADAR_BORESIGHT_OFFSET_DEG
+    int "Radar-to-camera horizontal offset (degrees)"
+    range -30 30
+    default 0
+    help
+        Calibration offset added to radar bearings before camera association.
+        Positive values move radar tracks to the right in the camera image.
 
 config AIRSOFT_MAX_RANGE_M
     int "Maximum overlay range (metres)"
@@ -106,6 +114,37 @@ config AIRSOFT_CAMERA_BOARD_S3_CAM
 
 endchoice
 
+config AIRSOFT_CAMERA_MOTION_TRACKING
+    bool "Track moving camera regions"
+    depends on AIRSOFT_CAMERA_BOARD_S3_CAM
+    default y
+    help
+        Run a low-memory visual motion detector. It contributes bearing-only
+        observations that are associated with persistent radar tracks.
+
+config AIRSOFT_CAMERA_MOTION_THRESHOLD
+    int "Camera motion sensitivity threshold"
+    depends on AIRSOFT_CAMERA_MOTION_TRACKING
+    range 5 80
+    default 18
+    help
+        Minimum exposure-compensated luma change (0-255) in a downsampled
+        camera cell. Lower values see subtler motion but produce more noise.
+
+config AIRSOFT_CAMERA_MIN_MOTION_CELLS
+    int "Minimum moving cells per visual target"
+    depends on AIRSOFT_CAMERA_MOTION_TRACKING
+    range 2 50
+    default 4
+
+config AIRSOFT_CAMERA_GLOBAL_MOTION_PERCENT
+    int "Suppress frame when motion exceeds (percent)"
+    depends on AIRSOFT_CAMERA_MOTION_TRACKING
+    range 10 90
+    default 45
+    help
+        Prevents panning or shaking the scope from creating false tracks.
+
 config AIRSOFT_DEBUG_WIFI_STREAM
     bool "Enable Wi-Fi debug camera stream"
     default n
@@ -129,5 +168,38 @@ config AIRSOFT_MIN_RANGE_M
     default 120
     help
         Suppresses self-clutter and muzzle-adjacent noise. Value is centimetres.
+
+config AIRSOFT_TRACK_RADAR_GATE_CM
+    int "Radar track association gate (cm)"
+    range 30 300
+    default 120
+    help
+        Maximum predicted-to-measured distance for keeping the same track ID.
+
+config AIRSOFT_TRACK_CAMERA_GATE_DEG
+    int "Camera/radar association gate (degrees)"
+    range 3 30
+    default 12
+    help
+        Maximum bearing difference for treating visual and radar observations
+        as the same player.
+
+config AIRSOFT_TRACK_RADAR_HOLD_MS
+    int "Radar source hold time (ms)"
+    range 100 2000
+    default 500
+
+config AIRSOFT_TRACK_CAMERA_HOLD_MS
+    int "Camera source hold time (ms)"
+    range 100 2000
+    default 400
+
+config AIRSOFT_TRACK_COAST_MS
+    int "Track prediction timeout (ms)"
+    range 300 5000
+    default 1600
+    help
+        Keep predicting a player briefly when both sensors lose them. Longer
+        values bridge occlusion better but retain stale contacts for longer.
 
 endmenu

@@ -1,6 +1,7 @@
 idf_component_register(
     SRCS
         "main.c"
+        "camera_motion.c"
         "ld2450.c"
         "radar_overlay.c"
         "scope_ui.c"
@@ -8,6 +9,7 @@ idf_component_register(
         "overlay_draw.c"
         "sim_radar.c"
         "st7789.c"
+        "target_tracker.c"
         "web_stream.c"
     INCLUDE_DIRS "."
     REQUIRES driver esp_timer esp_lcd esp32-camera esp_wifi esp_http_server nvs_flash esp_netif esp_event
