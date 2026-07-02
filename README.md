@@ -1,4 +1,4 @@
-# FIELDNOTE — Airsoft radar scope
+# PULSAR — Airsoft radar scope
 
 A handheld "wall sense" scope for airsoft: an **HLK-LD2450** 24 GHz mmWave radar
 detects human-sized motion through light cover (drywall, plywood, foliage), and
@@ -59,6 +59,7 @@ Requires ESP-IDF 5.4+.
 ```powershell
 cd firmware/airsoft-scope
 idf.py set-target esp32s3
+idf.py build
 idf.py -p COM7 flash monitor
 ```
 
@@ -66,7 +67,7 @@ idf.py -p COM7 flash monitor
 
 | Setting | Default | Notes |
 |---|---|---|
-| Operating mode | **Live LD2450 radar** | Switch to *Simulation* to develop with no radar wired |
+| Operating mode | **Simulation** | Switch to *Live* after wiring the LD2450 |
 | LD2450 UART | UART1, GPIO1 TX / GPIO14 RX | 256000 baud |
 | Camera board | **ESP32-S3-CAM** | Composites blips onto the live OV2640/OV3660 feed |
 | Display rotation | 0/90/180/270 | Match the mounted orientation (90/270 = portrait) |
@@ -75,6 +76,31 @@ idf.py -p COM7 flash monitor
 
 In **Simulation** mode the firmware generates moving synthetic targets and renders
 the radar-only scope view (reticle + blips) plus an ASCII preview on the serial monitor.
+
+The optional Wi-Fi debug stream is disabled by default. When enabled, configure
+the SSID, password, and a non-empty bearer token in `menuconfig`; `/jpg` and
+`/stream` reject unauthenticated requests. For example:
+
+```powershell
+curl.exe -H "Authorization: Bearer YOUR_TOKEN" http://DEVICE_IP/jpg -o frame.jpg
+```
+
+## Verification
+
+The portable tracking and projection tests run on the host, while the firmware
+build checks the complete ESP-IDF integration:
+
+```powershell
+cmake -S tests -B build/tests
+cmake --build build/tests
+ctest --test-dir build/tests --output-on-failure
+
+cd firmware/airsoft-scope
+idf.py build
+```
+
+GitHub Actions runs the host tests and builds both the default offline profile
+and a feature-complete camera, live-radar, and authenticated-stream profile.
 
 ## Firmware layout
 

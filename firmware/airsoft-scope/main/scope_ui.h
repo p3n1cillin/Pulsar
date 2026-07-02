@@ -1,8 +1,11 @@
 #pragma once
 
+#include <stdbool.h>
+
+#include "esp_err.h"
 #include "scope_types.h"
 
-void scope_ui_init(int width, int height);
+esp_err_t scope_ui_init(int width, int height);
 void scope_ui_composite(
     const airsoft_overlay_t *overlay,
     uint16_t *live_frame,
@@ -12,9 +15,9 @@ void scope_ui_composite(
 // Used when no camera frame is available.
 void scope_ui_render_scope(const airsoft_overlay_t *overlay);
 
-// Return the last framebuffer sent to the panel (RGB565) and its dimensions,
-// for the debug web stream. Returns false before the first frame.
-#include <stdbool.h>
-bool scope_ui_panel_snapshot(const uint16_t **buf, int *w, int *h);
+// Lock and return the last framebuffer sent to the panel (RGB565). The caller
+// must call scope_ui_panel_snapshot_release() after it finishes reading.
+bool scope_ui_panel_snapshot_acquire(const uint16_t **buf, int *w, int *h);
+void scope_ui_panel_snapshot_release(void);
 
 void scope_ui_serial_preview(const airsoft_overlay_t *overlay);

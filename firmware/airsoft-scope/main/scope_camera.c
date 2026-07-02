@@ -1,12 +1,17 @@
-#include "esp_camera.h"
 #include "esp_log.h"
 #include "sdkconfig.h"
+
+#if CONFIG_AIRSOFT_CAMERA_BOARD_S3_CAM
+#include "esp_camera.h"
+#endif
 
 #include "scope_camera.h"
 
 static const char *TAG = "scope_camera";
 static bool camera_ready;
+#if CONFIG_AIRSOFT_CAMERA_BOARD_S3_CAM
 static camera_fb_t *held_frame;
+#endif
 
 #if CONFIG_AIRSOFT_CAMERA_BOARD_S3_CAM
 
@@ -45,9 +50,8 @@ static camera_config_t s3_cam_config(void) {
 
 esp_err_t scope_camera_init(void) {
     camera_ready = false;
-    held_frame = NULL;
-
 #if CONFIG_AIRSOFT_CAMERA_BOARD_S3_CAM
+    held_frame = NULL;
     const camera_config_t config = s3_cam_config();
     esp_err_t err = esp_camera_init(&config);
     if (err != ESP_OK) {
@@ -75,6 +79,7 @@ bool scope_camera_ready(void) {
 }
 
 bool scope_camera_grab_rgb565(uint16_t **pixels, int *width, int *height) {
+#if CONFIG_AIRSOFT_CAMERA_BOARD_S3_CAM
     if (!camera_ready || !pixels || !width || !height) {
         return false;
     }
@@ -97,11 +102,19 @@ bool scope_camera_grab_rgb565(uint16_t **pixels, int *width, int *height) {
     *width = (int)held_frame->width;
     *height = (int)held_frame->height;
     return true;
+#else
+    (void)pixels;
+    (void)width;
+    (void)height;
+    return false;
+#endif
 }
 
 void scope_camera_release(void) {
+#if CONFIG_AIRSOFT_CAMERA_BOARD_S3_CAM
     if (held_frame) {
         esp_camera_fb_return(held_frame);
         held_frame = NULL;
     }
+#endif
 }

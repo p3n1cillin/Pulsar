@@ -98,6 +98,15 @@ config AIRSOFT_SERIAL_PREVIEW
     bool "Print ASCII overlay preview on USB serial"
     default y
 
+config AIRSOFT_SERIAL_PREVIEW_PERIOD_MS
+    int "Serial preview period (ms)"
+    depends on AIRSOFT_SERIAL_PREVIEW
+    range 250 10000
+    default 1000
+    help
+        Rate limit the multi-line ASCII preview to avoid serial logging from
+        consuming the render task's frame budget.
+
 choice AIRSOFT_CAMERA_BOARD
     prompt "Camera board"
     default AIRSOFT_CAMERA_BOARD_NONE
@@ -161,6 +170,15 @@ config AIRSOFT_WIFI_PASS
     string "Wi-Fi password"
     depends on AIRSOFT_DEBUG_WIFI_STREAM
     default ""
+
+config AIRSOFT_STREAM_TOKEN
+    string "Debug stream bearer token"
+    depends on AIRSOFT_DEBUG_WIFI_STREAM
+    default ""
+    help
+        Required value for the HTTP Authorization header as "Bearer TOKEN".
+        The stream refuses to start when this token is empty. Keep the generated
+        sdkconfig local; it is excluded from version control.
 
 config AIRSOFT_MIN_RANGE_M
     int "Ignore radar contacts closer than (cm)"

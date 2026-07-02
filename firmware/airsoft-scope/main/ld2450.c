@@ -127,8 +127,9 @@ static void uart_reader_task(void *arg) {
 }
 
 esp_err_t ld2450_init(const ld2450_config_t *config) {
-    frame_callback = config ? config->callback : NULL;
-    callback_context = config ? config->context : NULL;
+    ESP_RETURN_ON_FALSE(config && config->callback, ESP_ERR_INVALID_ARG, TAG, "callback required");
+    frame_callback = config->callback;
+    callback_context = config->context;
     parser_len = 0;
 
     const uart_config_t uart_cfg = {
@@ -156,7 +157,13 @@ esp_err_t ld2450_init(const ld2450_config_t *config) {
         TAG,
         "uart pins failed");
 
-    xTaskCreate(uart_reader_task, "ld2450_rx", 4096, NULL, 5, NULL);
+    if (xTaskCreate(uart_reader_task, "ld2450_rx", 4096, NULL, 5, NULL) != pdPASS) {
+        uart_driver_delete(CONFIG_AIRSOFT_LD2450_UART_NUM);
+        frame_callback = NULL;
+        callback_context = NULL;
+        ESP_LOGE(TAG, "unable to create UART reader task");
+        return ESP_ERR_NO_MEM;
+    }
     ESP_LOGI(
         TAG,
         "LD2450 UART%d @ %d baud on TX=%d RX=%d",

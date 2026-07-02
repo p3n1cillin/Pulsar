@@ -3,8 +3,9 @@
 
 #include "target_tracker.h"
 
-#define RAD_TO_DEG (180.0f / (float)M_PI)
-#define DEG_TO_RAD ((float)M_PI / 180.0f)
+#define AIRSOFT_PI 3.14159265358979323846f
+#define RAD_TO_DEG (180.0f / AIRSOFT_PI)
+#define DEG_TO_RAD (AIRSOFT_PI / 180.0f)
 
 typedef struct {
     uint8_t track;
@@ -52,15 +53,29 @@ static void sort_pairs(association_pair_t *pairs, int count) {
     }
 }
 
+static bool id_is_active(const target_tracker_t *tracker, uint8_t id) {
+    for (int i = 0; i < AIRSOFT_MAX_TRACKS; ++i) {
+        if (tracker->slots[i].active && tracker->slots[i].id == id) {
+            return true;
+        }
+    }
+    return false;
+}
+
 static uint8_t allocate_id(target_tracker_t *tracker) {
-    uint8_t id = tracker->next_id++;
-    if (id == 0) {
-        id = tracker->next_id++;
+    for (int attempt = 0; attempt < UINT8_MAX; ++attempt) {
+        uint8_t id = tracker->next_id++;
+        if (id == 0) {
+            id = tracker->next_id++;
+        }
+        if (tracker->next_id == 0) {
+            tracker->next_id = 1;
+        }
+        if (!id_is_active(tracker, id)) {
+            return id;
+        }
     }
-    if (tracker->next_id == 0) {
-        tracker->next_id = 1;
-    }
-    return id;
+    return 0;
 }
 
 static int allocate_slot(target_tracker_t *tracker, uint64_t now_us, bool radar_priority) {
@@ -312,11 +327,14 @@ static void associate_camera(
     if (!frame || frame->global_motion) return;
     association_pair_t pairs[AIRSOFT_MAX_TRACKS * AIRSOFT_MAX_CAMERA_DETECTIONS];
     int pair_count = 0;
+    const uint8_t observation_count = frame->count < AIRSOFT_MAX_CAMERA_DETECTIONS
+        ? frame->count
+        : AIRSOFT_MAX_CAMERA_DETECTIONS;
 
     for (int t = 0; t < AIRSOFT_MAX_TRACKS; ++t) {
         const target_tracker_slot_t *slot = &tracker->slots[t];
         if (!slot->active) continue;
-        for (uint8_t o = 0; o < frame->count; ++o) {
+        for (uint8_t o = 0; o < observation_count; ++o) {
             if (!frame->detections[o].valid) continue;
             const float error = fabsf(normalize_angle(
                 frame->detections[o].bearing_deg - slot->bearing_deg));
@@ -350,7 +368,7 @@ static void associate_camera(
     // minting duplicate IDs.
     const float duplicate_gate = fminf(
         4.0f, tracker->config.camera_bearing_gate_deg * 0.4f);
-    for (uint8_t o = 0; o < frame->count; ++o) {
+    for (uint8_t o = 0; o < observation_count; ++o) {
         if (observation_used[o] || !frame->detections[o].valid) continue;
         for (int t = 0; t < AIRSOFT_MAX_TRACKS; ++t) {
             if (!track_used[t]) continue;
@@ -363,7 +381,7 @@ static void associate_camera(
         }
     }
 
-    for (uint8_t o = 0; o < frame->count; ++o) {
+    for (uint8_t o = 0; o < observation_count; ++o) {
         if (observation_used[o] || !frame->detections[o].valid) continue;
         const int slot = allocate_slot(tracker, now_us, false);
         if (slot >= 0) {

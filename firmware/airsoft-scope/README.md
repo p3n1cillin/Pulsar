@@ -20,6 +20,7 @@ OV2640/OV3660 --DVP--> live RGB565 frame --> draw blips --> ST7789V
 ```powershell
 cd firmware/airsoft-scope
 idf.py set-target esp32s3
+idf.py build
 idf.py -p COM7 flash monitor
 ```
 
@@ -27,12 +28,22 @@ idf.py -p COM7 flash monitor
 
 | Setting | Default | Notes |
 |---|---|---|
-| Operating mode | Live LD2450 radar | *Simulation* generates synthetic targets, no radar needed |
+| Operating mode | Simulation | Switch to *Live* after wiring the LD2450 |
 | LD2450 UART | UART1, GPIO1 TX / GPIO14 RX, 256000 baud | radar TX → ESP RX (GPIO14) |
 | Camera board | ESP32-S3-CAM | composites blips onto the live feed |
 | Display rotation | 0 / 90 / 180 / 270 | 0/180 landscape, 90/270 portrait |
 | Camera HFOV | 66° | align blips to the image |
 | Min range | 120 cm | suppress muzzle-adjacent clutter |
+
+The optional debug stream also requires a non-empty bearer token. Requests to
+`/jpg` and `/stream` must send `Authorization: Bearer TOKEN`; the server fails
+closed when either the SSID or token is empty.
+
+## Tests
+
+From the repository root, run the native tracking tests with CMake and CTest.
+Run `idf.py build` here for the full firmware build. CI performs both checks and
+also compiles the feature-complete configuration from `sdkconfig.ci.defaults`.
 
 ## Wiring
 

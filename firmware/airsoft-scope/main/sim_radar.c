@@ -34,8 +34,15 @@ static void sim_task(void *arg) {
 }
 
 esp_err_t sim_radar_start(sim_radar_cb_t callback, void *context) {
+    if (!callback) {
+        return ESP_ERR_INVALID_ARG;
+    }
     sim_callback = callback;
     sim_context = context;
-    xTaskCreate(sim_task, "sim_radar", 3072, NULL, 4, NULL);
+    if (xTaskCreate(sim_task, "sim_radar", 3072, NULL, 4, NULL) != pdPASS) {
+        sim_callback = NULL;
+        sim_context = NULL;
+        return ESP_ERR_NO_MEM;
+    }
     return ESP_OK;
 }

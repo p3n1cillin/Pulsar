@@ -3,6 +3,7 @@ firmware/airsoft-scope/build/
 firmware/airsoft-scope/managed_components/
 firmware/airsoft-scope/sdkconfig
 firmware/airsoft-scope/sdkconfig.old
+/build/
 
 # Editor / OS
 *.swp

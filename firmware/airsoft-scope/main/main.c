@@ -22,6 +22,7 @@ static SemaphoreHandle_t radar_lock;
 static target_tracker_t player_tracker;
 static camera_motion_state_t camera_motion;
 static uint64_t last_radar_processed_us;
+static uint64_t last_serial_preview_us;
 
 static void on_radar_frame(const airsoft_radar_frame_t *frame, void *context) {
     (void)context;
@@ -47,6 +48,7 @@ static void copy_latest_frame(airsoft_radar_frame_t *dest) {
 static void render_task(void *arg) {
     (void)arg;
     const TickType_t frame_delay = scope_camera_ready() ? pdMS_TO_TICKS(100) : pdMS_TO_TICKS(250);
+    TickType_t last_wake = xTaskGetTickCount();
 
     while (true) {
         airsoft_radar_frame_t frame = {0};
@@ -106,8 +108,14 @@ static void render_task(void *arg) {
             scope_ui_render_scope(&overlay);
         }
 
-        scope_ui_serial_preview(&overlay);
-        vTaskDelay(frame_delay);
+#if CONFIG_AIRSOFT_SERIAL_PREVIEW
+        if (now_us - last_serial_preview_us >=
+            (uint64_t)CONFIG_AIRSOFT_SERIAL_PREVIEW_PERIOD_MS * 1000ULL) {
+            scope_ui_serial_preview(&overlay);
+            last_serial_preview_us = now_us;
+        }
+#endif
+        xTaskDelayUntil(&last_wake, frame_delay);
     }
 }
 
@@ -115,7 +123,11 @@ void app_main(void) {
     ESP_LOGI(TAG, "Airsoft scope: radar contacts overlaid on live feed");
 
     radar_lock = xSemaphoreCreateMutex();
-    scope_ui_init(CONFIG_AIRSOFT_DISPLAY_WIDTH, CONFIG_AIRSOFT_DISPLAY_HEIGHT);
+    if (!radar_lock) {
+        ESP_LOGE(TAG, "unable to allocate radar frame lock");
+        return;
+    }
+    ESP_ERROR_CHECK(scope_ui_init(CONFIG_AIRSOFT_DISPLAY_WIDTH, CONFIG_AIRSOFT_DISPLAY_HEIGHT));
     if (scope_camera_init() != ESP_OK) {
         ESP_LOGW(TAG, "camera unavailable; using radar-only scope view");
     }
@@ -145,9 +157,15 @@ void app_main(void) {
     ESP_ERROR_CHECK(ld2450_init(&radar_cfg));
 #endif
 
-    web_stream_start();  // no-op unless the Wi-Fi debug stream is enabled
+    const esp_err_t stream_err = web_stream_start();  // no-op unless enabled
+    if (stream_err != ESP_OK) {
+        ESP_LOGW(TAG, "debug stream unavailable: %s", esp_err_to_name(stream_err));
+    }
 
-    xTaskCreate(render_task, "composite", 8192, NULL, 5, NULL);
+    if (xTaskCreate(render_task, "composite", 8192, NULL, 5, NULL) != pdPASS) {
+        ESP_LOGE(TAG, "unable to create compositor task");
+        return;
+    }
     ESP_LOGI(
         TAG,
         "Pipeline: camera motion + LD2450 -> persistent player tracks -> %s",

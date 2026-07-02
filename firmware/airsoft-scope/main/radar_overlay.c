@@ -1,7 +1,7 @@
 #include <math.h>
+#include <string.h>
 
 #include "radar_overlay.h"
-#include "sdkconfig.h"
 
 static float clampf(float value, float min_value, float max_value) {
     if (value < min_value) return min_value;
@@ -16,7 +16,10 @@ void radar_overlay_project(
     float camera_hfov_deg,
     float max_range_m,
     airsoft_overlay_t *overlay) {
-    overlay->count = 0;
+    if (!overlay) {
+        return;
+    }
+    memset(overlay, 0, sizeof(*overlay));
 
     if (!frame || display_width <= 0 || display_height <= 0 ||
         camera_hfov_deg <= 0.0f || max_range_m <= 0.0f) {

@@ -134,5 +134,6 @@ insert a microSD card while the display is wired.
 ```powershell
 cd firmware/airsoft-scope
 idf.py set-target esp32s3
+idf.py build
 idf.py -p COM7 flash monitor
 ```

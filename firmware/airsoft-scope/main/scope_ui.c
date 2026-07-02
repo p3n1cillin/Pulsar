@@ -3,6 +3,8 @@
 
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "sdkconfig.h"
 
 #include "overlay_draw.h"
@@ -20,15 +22,27 @@ static uint16_t *rot_fb;  // panel buffer for portrait rotations (240 x 320), el
 static const uint16_t *s_present_buf;
 static int s_present_w;
 static int s_present_h;
+static SemaphoreHandle_t s_frame_lock;
 
-bool scope_ui_panel_snapshot(const uint16_t **buf, int *w, int *h) {
-    if (!s_present_buf || !buf || !w || !h) {
+bool scope_ui_panel_snapshot_acquire(const uint16_t **buf, int *w, int *h) {
+    if (!s_frame_lock || !buf || !w || !h ||
+        xSemaphoreTake(s_frame_lock, pdMS_TO_TICKS(250)) != pdTRUE) {
+        return false;
+    }
+    if (!s_present_buf) {
+        xSemaphoreGive(s_frame_lock);
         return false;
     }
     *buf = s_present_buf;
     *w = s_present_w;
     *h = s_present_h;
     return true;
+}
+
+void scope_ui_panel_snapshot_release(void) {
+    if (s_frame_lock) {
+        xSemaphoreGive(s_frame_lock);
+    }
 }
 
 static inline uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
@@ -116,9 +130,17 @@ static void present(const uint16_t *land) {
     s_present_h = dh;
 }
 
-void scope_ui_init(int width, int height) {
+esp_err_t scope_ui_init(int width, int height) {
+    if (width <= 0 || height <= 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
     ui_width = width;
     ui_height = height;
+    s_frame_lock = xSemaphoreCreateMutex();
+    if (!s_frame_lock) {
+        ESP_LOGE(TAG, "no memory for framebuffer lock");
+        return ESP_ERR_NO_MEM;
+    }
 
     if (st7789_init() != ESP_OK) {
         ESP_LOGE(TAG, "display init failed; falling back to serial preview only");
@@ -149,10 +171,17 @@ void scope_ui_init(int width, int height) {
     }
     if (!ui_fb) {
         ESP_LOGE(TAG, "no memory for %dx%d framebuffer", width, height);
+        return ESP_ERR_NO_MEM;
+    }
+    if (portrait && !rot_fb) {
+        heap_caps_free(ui_fb);
+        ui_fb = NULL;
+        return ESP_ERR_NO_MEM;
     }
 
     ESP_LOGI(TAG, "overlay compositor ready for %dx%d (%s)", width, height,
              portrait ? "portrait" : "landscape");
+    return ESP_OK;
 }
 
 void scope_ui_composite(
@@ -164,12 +193,14 @@ void scope_ui_composite(
         return;
     }
 
-    if (live_width == ui_width && live_height == ui_height) {
+    if (live_width == ui_width && live_height == ui_height &&
+        xSemaphoreTake(s_frame_lock, pdMS_TO_TICKS(250)) == pdTRUE) {
         // Copy the camera frame (PSRAM) into the render buffer, draw blips, present.
         memcpy(ui_fb, live_frame, (size_t)ui_width * (size_t)ui_height * sizeof(uint16_t));
         overlay_draw_contacts(
             ui_fb, ui_width, ui_height, overlay, (float)CONFIG_AIRSOFT_MAX_RANGE_M);
         present(ui_fb);
+        xSemaphoreGive(s_frame_lock);
     }
 
 }
@@ -179,10 +210,14 @@ void scope_ui_render_scope(const airsoft_overlay_t *overlay) {
         return;
     }
 
+    if (xSemaphoreTake(s_frame_lock, pdMS_TO_TICKS(250)) != pdTRUE) {
+        return;
+    }
     draw_reticle(ui_fb, ui_width, ui_height);
     overlay_draw_contacts(
         ui_fb, ui_width, ui_height, overlay, (float)CONFIG_AIRSOFT_MAX_RANGE_M);
     present(ui_fb);
+    xSemaphoreGive(s_frame_lock);
 }
 
 void scope_ui_serial_preview(const airsoft_overlay_t *overlay) {
