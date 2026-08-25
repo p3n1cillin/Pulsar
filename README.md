@@ -102,7 +102,9 @@ idf.py build
 `tracking_tests` covers target association/fusion/coasting and overlay
 projection; `ld2450_tests` covers the pure LD2450 byte-stream parser in
 `firmware/airsoft-scope/main/ld2450_parser.c` (frame decode + sign handling,
-split feeds, garbage resync, overflow safety).
+split feeds, garbage resync, overflow safety); `camera_motion_tests` covers the
+grid motion detector (`camera_motion.c`, via `tests/stub/sdkconfig.h`) including
+static-scene suppression, blob detection, and global-motion rejection.
 
 GitHub Actions runs the host tests and builds both the default offline profile
 and a feature-complete camera, live-radar, and authenticated-stream profile.
