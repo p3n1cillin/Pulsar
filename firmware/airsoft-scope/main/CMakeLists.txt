@@ -14,6 +14,7 @@ idf_component_register(
         "main.c"
         "camera_motion.c"
         "ld2450.c"
+        "ld2450_parser.c"
         "radar_overlay.c"
         "scope_ui.c"
         "scope_camera.c"

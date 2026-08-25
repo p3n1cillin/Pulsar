@@ -87,17 +87,22 @@ curl.exe -H "Authorization: Bearer YOUR_TOKEN" http://DEVICE_IP/jpg -o frame.jpg
 
 ## Verification
 
-The portable tracking and projection tests run on the host, while the firmware
-build checks the complete ESP-IDF integration:
+The portable tracking, projection, and radar-frame-parser tests run on the host,
+while the firmware build checks the complete ESP-IDF integration:
 
 ```powershell
 cmake -S tests -B build/tests
-cmake --build build/tests
-ctest --test-dir build/tests --output-on-failure
+cmake --build build/tests --config Debug   # omit --config on single-config generators
+ctest --test-dir build/tests -C Debug --output-on-failure
 
 cd firmware/airsoft-scope
 idf.py build
 ```
+
+`tracking_tests` covers target association/fusion/coasting and overlay
+projection; `ld2450_tests` covers the pure LD2450 byte-stream parser in
+`firmware/airsoft-scope/main/ld2450_parser.c` (frame decode + sign handling,
+split feeds, garbage resync, overflow safety).
 
 GitHub Actions runs the host tests and builds both the default offline profile
 and a feature-complete camera, live-radar, and authenticated-stream profile.
