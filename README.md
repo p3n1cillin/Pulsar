@@ -114,13 +114,18 @@ and a feature-complete camera, live-radar, and authenticated-stream profile.
 ```text
 firmware/airsoft-scope/main/
   main.c            Boot, mode selection, render loop
-  ld2450.c          LD2450 UART frame parser -> target X/Y
-  radar_overlay.c   Radar X/Y -> screen bearing/range projection
+  ld2450.c          LD2450 UART reader (timestamps frames)
+  ld2450_parser.c   Pure LD2450 byte-stream parser (host-tested)
+  camera_motion.c   Grid motion detector -> bearing-only observations
+  target_tracker.c  Radar/camera fusion into persistent tracks
+  radar_overlay.c   Track bearing/range -> screen projection
   overlay_draw.c    Orange contact markers (rings + crosshair)
   scope_camera.c    OV2640/OV3660 DVP capture (RGB565, PSRAM)
   scope_ui.c        Framebuffer compositor, rotation, serial preview
+  web_stream.c      Optional authenticated MJPEG debug stream
   st7789.c          ST7789V SPI display driver (esp_lcd)
   sim_radar.c       Synthetic targets for bench development
+  scope_types.h     Shared frame/track/detection types
   pins.h            GPIO map for the Freenove S3-CAM build
 ```
 
