@@ -11,7 +11,7 @@ jobs:
   host-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Configure
         run: cmake -S tests -B build/tests -DCMAKE_BUILD_TYPE=Release
       - name: Build
@@ -33,7 +33,7 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build default profile
         if: matrix.profile == 'default'
         working-directory: firmware/airsoft-scope
