@@ -42,5 +42,7 @@ if(MSVC)
     target_compile_options(camera_motion_tests PRIVATE /W4 /WX)
 else()
     target_compile_options(camera_motion_tests PRIVATE -Wall -Wextra -Werror -pedantic)
+    # lroundf lives in libm on glibc; without it the link fails on Linux.
+    target_link_libraries(camera_motion_tests PRIVATE m)
 endif()
 add_test(NAME camera_motion_tests COMMAND camera_motion_tests)

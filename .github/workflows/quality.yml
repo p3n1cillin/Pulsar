@@ -11,7 +11,7 @@ jobs:
   host-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Configure
         run: cmake -S tests -B build/tests -DCMAKE_BUILD_TYPE=Release
       - name: Build
@@ -26,16 +26,25 @@ jobs:
       fail-fast: false
       matrix:
         profile: [default, feature-complete]
+    # Actions starts the container without its entrypoint, so the IDF
+    # environment is never exported and idf.py is not on PATH. Every step
+    # sources export.sh itself; it needs bash, not the default sh.
+    defaults:
+      run:
+        shell: bash
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build default profile
         if: matrix.profile == 'default'
         working-directory: firmware/airsoft-scope
-        run: idf.py -B build-default build
+        run: |
+          . "$IDF_PATH/export.sh"
+          idf.py -B build-default build
       - name: Build feature-complete profile
         if: matrix.profile == 'feature-complete'
         working-directory: firmware/airsoft-scope
         run: >-
+          . "$IDF_PATH/export.sh" &&
           idf.py -B build-feature-complete
           -D SDKCONFIG=build-feature-complete/sdkconfig
           -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.ci.defaults"
