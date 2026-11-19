@@ -4,9 +4,15 @@
 
 #include "sdkconfig.h"
 
+#include "camera_model.h"
 #include "camera_motion.h"
 
-static uint8_t rgb565_luma(uint16_t pixel) {
+// esp32-camera delivers RGB565 in wire (big-endian) byte order, which is also
+// what the ST7789 expects, so frames are passed through untouched. Swap back to
+// native order before splitting channels; reading the halves the wrong way
+// round turns green-channel LSB noise into large fake luma changes.
+static uint8_t rgb565_luma(uint16_t wire_pixel) {
+    const uint16_t pixel = (uint16_t)((wire_pixel >> 8) | (wire_pixel << 8));
     const unsigned r = ((pixel >> 11) & 0x1F) * 255U / 31U;
     const unsigned g = ((pixel >> 5) & 0x3F) * 255U / 63U;
     const unsigned b = (pixel & 0x1F) * 255U / 31U;
@@ -223,8 +229,10 @@ void camera_motion_process(
             ? (float)sum_y / (float)raw_points + 0.5f
             : ((float)min_y + (float)max_y + 1.0f) * 0.5f;
         airsoft_camera_detection_t detection = {
-            .bearing_deg =
-                (grid_center_x / (float)CAMERA_MOTION_GRID_WIDTH - 0.5f) * camera_hfov_deg,
+            .bearing_deg = camera_model_x_to_bearing(
+                grid_center_x * (float)width / (float)CAMERA_MOTION_GRID_WIDTH,
+                width,
+                camera_hfov_deg),
             .confidence = 0.35f + 0.65f * clamp_float(
                 (float)raw_points /
                     (float)(CONFIG_AIRSOFT_CAMERA_MIN_MOTION_CELLS * 6),

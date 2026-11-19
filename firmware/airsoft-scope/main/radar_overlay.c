@@ -1,6 +1,7 @@
 #include <math.h>
 #include <string.h>
 
+#include "camera_model.h"
 #include "radar_overlay.h"
 
 static float clampf(float value, float min_value, float max_value) {
@@ -26,9 +27,6 @@ void radar_overlay_project(
         return;
     }
 
-    const float half_camera = camera_hfov_deg * 0.5f;
-    const float pixels_per_deg = (float)display_width / camera_hfov_deg;
-
     for (uint8_t i = 0; i < frame->count && overlay->count < AIRSOFT_MAX_TARGETS; ++i) {
         const airsoft_track_t *track = &frame->tracks[i];
         if (!track->valid) {
@@ -36,8 +34,11 @@ void radar_overlay_project(
         }
 
         airsoft_overlay_blip_t *blip = &overlay->blips[overlay->count++];
-        const float projected_x = (track->bearing_deg + half_camera) * pixels_per_deg;
-        blip->offscreen = projected_x < 0.0f || projected_x >= (float)display_width;
+        float projected_x = 0.0f;
+        const bool projectable = camera_model_bearing_to_x(
+            track->bearing_deg, display_width, camera_hfov_deg, &projected_x);
+        blip->offscreen =
+            !projectable || projected_x < 0.0f || projected_x >= (float)display_width;
         blip->x = (int16_t)lroundf(clampf(projected_x, 7.0f, (float)display_width - 8.0f));
         if (track->range_valid) {
             blip->y = (int16_t)lroundf(
@@ -57,4 +58,23 @@ void radar_overlay_project(
         blip->range_valid = track->range_valid;
         blip->valid = true;
     }
+}
+
+void radar_overlay_declutter(airsoft_overlay_t *overlay) {
+    if (!overlay) {
+        return;
+    }
+    uint8_t kept = 0;
+    for (uint8_t i = 0; i < overlay->count; ++i) {
+        const airsoft_overlay_blip_t *blip = &overlay->blips[i];
+        const bool radar_backed = (blip->source_flags & AIRSOFT_TRACK_SOURCE_RADAR) != 0;
+        const bool predicted = (blip->source_flags & AIRSOFT_TRACK_SOURCE_PREDICTED) != 0;
+        if (blip->valid && radar_backed && !predicted) {
+            overlay->blips[kept++] = *blip;
+        }
+    }
+    for (uint8_t i = kept; i < overlay->count; ++i) {
+        memset(&overlay->blips[i], 0, sizeof(overlay->blips[i]));
+    }
+    overlay->count = kept;
 }

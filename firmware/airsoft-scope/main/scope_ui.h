@@ -3,17 +3,20 @@
 #include <stdbool.h>
 
 #include "esp_err.h"
+#include "overlay_draw.h"
 #include "scope_types.h"
 
 esp_err_t scope_ui_init(int width, int height);
+// hud may be NULL to draw contacts only.
 void scope_ui_composite(
     const airsoft_overlay_t *overlay,
+    const scope_hud_t *hud,
     uint16_t *live_frame,
     int live_width,
     int live_height);
 // Render the radar-only scope view (reticle + contacts) to the display.
 // Used when no camera frame is available.
-void scope_ui_render_scope(const airsoft_overlay_t *overlay);
+void scope_ui_render_scope(const airsoft_overlay_t *overlay, const scope_hud_t *hud);
 
 // Lock and return the last framebuffer sent to the panel (RGB565). The caller
 // must call scope_ui_panel_snapshot_release() after it finishes reading.

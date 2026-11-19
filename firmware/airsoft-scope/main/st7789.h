@@ -19,3 +19,7 @@ bool st7789_ready(void);
 // Panel dimensions after rotation: 320x240 for 0/180, 240x320 for 90/270.
 int st7789_panel_width(void);
 int st7789_panel_height(void);
+
+// Set backlight brightness (0-100 %, PWM on the BL pin). No-op if PWM setup
+// failed, in which case the backlight stays fully on.
+void st7789_set_backlight(uint8_t percent);

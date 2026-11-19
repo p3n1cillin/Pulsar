@@ -1,7 +1,11 @@
-set(airsoft_private_requires driver esp_timer esp_lcd)
+set(airsoft_private_requires driver esp_timer esp_lcd nvs_flash)
 
 if(CONFIG_AIRSOFT_CAMERA_BOARD_S3_CAM)
     list(APPEND airsoft_private_requires esp32-camera)
+endif()
+
+if(CONFIG_AIRSOFT_BATTERY_SENSE)
+    list(APPEND airsoft_private_requires esp_adc)
 endif()
 
 if(CONFIG_AIRSOFT_DEBUG_WIFI_STREAM)
@@ -12,12 +16,16 @@ endif()
 idf_component_register(
     SRCS
         "main.c"
+        "battery_gauge.c"
+        "button_input.c"
         "camera_motion.c"
         "ld2450.c"
         "ld2450_parser.c"
         "radar_overlay.c"
         "scope_ui.c"
         "scope_camera.c"
+        "scope_controls.c"
+        "scope_controls_logic.c"
         "overlay_draw.c"
         "sim_radar.c"
         "st7789.c"

@@ -34,6 +34,10 @@ idf.py -p COM7 flash monitor
 | Display rotation | 0 / 90 / 180 / 270 | 0/180 landscape, 90/270 portrait |
 | Camera HFOV | 66° | align blips to the image |
 | Min range | 120 cm | suppress muzzle-adjacent clutter |
+| Camera mirror / flip | on / on | match the camera orientation in the housing |
+| Radar link timeout | 1000 ms | **NO RADAR** banner when the LD2450 goes silent |
+| Housing buttons | GPIO 21 / 47 | brightness, declutter, boresight calibration (NVS) |
+| Battery monitor | off | GPIO 3 ADC through a 100k/100k divider |
 
 The optional debug stream also requires a non-empty bearer token. Requests to
 `/jpg` and `/stream` must send `Authorization: Bearer TOKEN`; the server fails
@@ -56,14 +60,22 @@ microSD pins (38/39/40) — do not insert a card.
 
 ```text
 main/
-  main.c            Boot, mode selection, render loop
-  ld2450.c          LD2450 UART frame parser (AA FF 03 00 ... 55 CC)
-  radar_overlay.c   Radar X/Y -> screen blip projection
-  overlay_draw.c    Orange contact markers
-  scope_camera.c    OV2640/OV3660 DVP capture (RGB565, PSRAM)
-  scope_ui.c        Framebuffer compositor + rotation + serial preview
-  st7789.c          ST7789V SPI driver (esp_lcd)
-  sim_radar.c       Synthetic targets for bench development
+  main.c                  Boot, mode selection, render loop, radar watchdog
+  ld2450.c / _parser.c    LD2450 UART reader + pure frame parser
+  camera_motion.c         Grid motion detector -> bearing-only detections
+  camera_model.h          Shared pinhole model (bearing <-> pixel)
+  target_tracker.c        Radar/camera fusion into persistent tracks
+  radar_overlay.c         Track -> screen projection, declutter
+  overlay_draw.c          Contact markers, 3x5 font, status HUD
+  scope_controls.c        Buttons, NVS settings, battery ADC
+  scope_controls_logic.c  Control state machine (host-tested)
+  button_input.c          Debounce + long press (host-tested)
+  battery_gauge.c         Li-ion voltage -> percent (host-tested)
+  scope_camera.c          OV2640/OV3660 DVP capture (RGB565, PSRAM)
+  scope_ui.c              Framebuffer compositor + rotation + serial preview
+  st7789.c                ST7789V SPI driver (esp_lcd) + PWM backlight
+  web_stream.c            Optional authenticated MJPEG debug stream
+  sim_radar.c             Synthetic targets for bench development
 ```
 
 See [`../../docs/airsoft-scope.md`](../../docs/airsoft-scope.md) for the BOM,

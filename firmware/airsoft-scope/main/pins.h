@@ -34,4 +34,9 @@
 #define AIRSOFT_PIN_LCD_CS     38
 #define AIRSOFT_PIN_LCD_DC     42
 #define AIRSOFT_PIN_LCD_RST    41
-#define AIRSOFT_PIN_LCD_BL     2
+#define AIRSOFT_PIN_LCD_BL     2   // PWM backlight (LEDC timer 1 / channel 1)
+
+// Housing controls and battery sense (menuconfig, defaults shown):
+//   MODE button   GPIO21 -> GND   (CONFIG_AIRSOFT_BUTTON_MODE_GPIO)
+//   ADJUST button GPIO47 -> GND   (CONFIG_AIRSOFT_BUTTON_ADJUST_GPIO)
+//   Battery sense GPIO3  ADC1     (CONFIG_AIRSOFT_BATTERY_ADC_GPIO, optional)
