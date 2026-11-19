@@ -1,0 +1,160 @@
+{
+  "generator": "pulsar_housing.py",
+  "parameters": {
+    "wall": 2.4,
+    "fit": 0.3,
+    "segments": 72,
+    "radar_freq_ghz": 24.125,
+    "radome_er": 2.7,
+    "radome_override": 0.0,
+    "radar_l": 44.0,
+    "radar_w": 15.0,
+    "radar_t": 1.6,
+    "radar_back_h": 3.2,
+    "esp_l": 63.6,
+    "esp_w": 28.0,
+    "esp_t": 1.6,
+    "cam_from_end": 14.0,
+    "cam_dz": 0.0,
+    "cam_stack": 7.5,
+    "cam_module": 9.0,
+    "cam_pupil_r": 2.0,
+    "cam_half_fov_diag": 42.0,
+    "lens_guard_d": 14.0,
+    "lens_guard_t": 1.0,
+    "usb_cut_y": 13.0,
+    "usb_cut_z": 12.5,
+    "header_zone": 26.0,
+    "disp_pcb_l": 58.0,
+    "disp_pcb_w": 35.0,
+    "disp_pcb_t": 1.6,
+    "disp_glass_t": 2.4,
+    "disp_active_l": 40.8,
+    "disp_active_w": 30.6,
+    "disp_active_dx": 0.0,
+    "disp_active_dz": 0.0,
+    "disp_window_margin": 0.8,
+    "disp_pins_h": 10.0,
+    "bat_l": 77.0,
+    "bat_w": 21.0,
+    "bat_h": 20.0,
+    "switch_cut_y": 13.2,
+    "switch_cut_z": 8.8,
+    "switch_body": 12.0,
+    "charger_cut_y": 11.0,
+    "charger_cut_z": 6.0,
+    "button_hole": 7.2,
+    "button_body_h": 14.0,
+    "inner_w": 79.0,
+    "inner_h": 49.0,
+    "front_depth": 26.0,
+    "depth": 80.0,
+    "corner_r": 4.0,
+    "lip_len": 4.0,
+    "lip_t": 1.6,
+    "pillar_r": 3.8,
+    "m3_clear": 3.4,
+    "m3_csk_d": 6.4,
+    "m3_insert_d": 4.0,
+    "m3_insert_depth": 6.0,
+    "mount_hole_dx": 9.0,
+    "mount_hole_dy": 18.0,
+    "mount_y": 52.0,
+    "clip_arm_t": 1.6,
+    "clip_barb": 0.7,
+    "rail_v_width": 21.2,
+    "rail_v_depth": 2.75,
+    "mount_len": 56.0,
+    "mount_w": 34.0,
+    "plate_t": 7.0,
+    "jaw_drop": 5.6,
+    "m4_clear": 4.4,
+    "m4_head_d": 7.6,
+    "m4_head_h": 3.0,
+    "m4_nut_af": 7.3,
+    "m4_nut_h": 3.4,
+    "bolt_z": -1.0,
+    "mlok_pitch": 40.0,
+    "adapter_len": 60.0,
+    "adapter_rail_h": 9.5,
+    "adapter_base_w": 20.0,
+    "adapter_slots": 3,
+    "adapter_cbore": 6.0,
+    "mlok_lug_w": 6.8,
+    "mlok_lug_l": 14.0,
+    "mlok_lug_h": 1.8,
+    "m5_clear": 5.5,
+    "m5_head_d": 10.2
+  },
+  "derived": {
+    "outer_mm": [
+      83.8,
+      80.0,
+      53.8
+    ],
+    "radome_thickness_mm": 3.781,
+    "radome_gap_mm": 6.213,
+    "camera_xz_mm": [
+      12.6,
+      18.9
+    ],
+    "radar_xz_mm": [
+      12.6,
+      42.4
+    ],
+    "esp_board_front_face_y_mm": 11.63
+  },
+  "checks_passed": true,
+  "parts": {
+    "pulsar_front_shell": {
+      "file": "pulsar_front_shell.stl",
+      "triangles": 4022,
+      "volume_cm3": 34.0,
+      "bed_footprint_mm": [
+        91.0,
+        61.0,
+        26.0
+      ]
+    },
+    "pulsar_rear_shell": {
+      "file": "pulsar_rear_shell.stl",
+      "triangles": 11158,
+      "volume_cm3": 50.8,
+      "bed_footprint_mm": [
+        91.0,
+        61.0,
+        58.0
+      ]
+    },
+    "pulsar_mount_picatinny": {
+      "file": "pulsar_mount_picatinny.stl",
+      "triangles": 1832,
+      "volume_cm3": 13.61,
+      "bed_footprint_mm": [
+        34.0,
+        56.0,
+        12.6
+      ]
+    },
+    "pulsar_mount_picatinny_jaw": {
+      "file": "pulsar_mount_picatinny_jaw.stl",
+      "triangles": 348,
+      "volume_cm3": 2.96,
+      "bed_footprint_mm": [
+        8.6,
+        56.0,
+        8.3
+      ]
+    },
+    "pulsar_mlok_picatinny_adapter": {
+      "file": "pulsar_mlok_picatinny_adapter.stl",
+      "triangles": 1884,
+      "volume_cm3": 8.68,
+      "bed_footprint_mm": [
+        21.2,
+        60.0,
+        11.3
+      ]
+    }
+  }
+}

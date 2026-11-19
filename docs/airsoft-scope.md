@@ -41,9 +41,13 @@ cannot see them.
         18650 / USB-C PD
 ```
 
-Keep the camera and radar apertures **parallel and close** (≤20 mm baseline), both
-on the same horizontal plane. A 3D-printed shroud reduces side lobes and protects
-the radar PCB. Use no metal-filled filament near the antenna.
+Keep the camera and radar apertures **parallel** and on the **same vertical axis**
+(radar directly above the camera). The overlay maps radar *bearing* to image x,
+so only horizontal offset between the sensors causes parallax; a vertical
+offset costs nothing. The printed housing in
+[`hardware/housing/`](../hardware/housing/) does this, puts the radar λ/2
+(6.2 mm) behind a half-wave (3.78 mm) solid front wall, and keeps metal and
+CF/GF-filled filament away from the antenna.
 
 ## Bill of materials
 
@@ -77,32 +81,34 @@ Set expectations: this is a **tactical hinting tool**, not military SAR.
 
 ## Recommended improvements over the base concept
 
-### 1. Dual-mode blips
-Render contacts differently when the camera also sees motion in that sector:
-**solid orange** = radar only (likely occluded), **red ring** = radar + visible
-motion (confirmed). Phase 1 ships radar-only blips; add a camera-ROI motion mask later.
+### 1. Dual-mode blips (done)
+**Solid orange** = radar only (likely occluded), **red rings** = radar + visible
+motion (confirmed), **cyan** = camera only, **dashed** = coasting prediction.
 
-### 2. One-time boresight calibration
-Store horizontal bearing offset (and optional FOV scale) in NVS after aligning on a
-walking teammate at known distances. Add a "cal mode" button.
+### 2. One-time boresight calibration (done)
+Hold button A to enter calibration, nudge with A/B in 0.5° steps while a
+teammate walks across the scene, hold A to save the offset to NVS.
 
-### 3. Power and thermal
+### 3. Power and thermal (housing done)
 LD2450 + camera capture + backlight can exceed 1.5 W. Use a separate 5 V rail for
-the radar, a bulk cap (470 µF) at the module, and vent slots in the print.
+the radar, a bulk cap (470 µF) at the module, and vent slots in the print (the
+housing vents the ESP end). Optional battery gauge on GPIO 3.
 
 ### 4. Display mirroring
 The operator faces the screen while the sensors face the field — mirror the camera
 horizontally so left/right matches intuitive shouldering. (The `Display rotation`
 menuconfig option sets the panel orientation for the housing.)
 
-### 5. Game-safe UX
-Mute/privacy switch for future recording paths; a haptic/audio ping when a blip
-enters the centre reticle; an outdoor brightness preset.
+### 5. Game-safe UX (partly done)
+Done: four-step PWM brightness, declutter view, and a **NO RADAR** warning when
+the LD2450 link drops (silence never looks like "nobody there"). Still open: a
+haptic/audio ping when a blip enters the centre reticle.
 
-### 6. Housing print tips
-Radar window in ABS/PETG (no metal-filled filament); flat polycarbonate camera lens
-guard; cable service loop between the front sensor tray and rear display; indexing
-pins so reassembly preserves boresight.
+### 6. Housing (done)
+See [`hardware/housing/`](../hardware/housing/): front sensor shell (radome,
+polycarbonate lens guard, snap clips), rear shell (display, 18650, controls),
+indexing lip so reassembly preserves boresight, Picatinny quick-detach clamp,
+and an M-LOK→Picatinny section.
 
 ## Pin map (Freenove S3-CAM build)
 

@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 640" font-family="Segoe UI, Helvetica, Arial, sans-serif" font-size="13">
+  <title>PULSAR wiring</title>
+  <rect width="960" height="640" fill="#ffffff"/>
+  <defs>
+    <style>
+      .box { stroke: #333; stroke-width: 1.4; rx: 8; }
+      .h { font-weight: 600; font-size: 14px; }
+      .pin { font-family: Consolas, Menlo, monospace; font-size: 12px; }
+      .note { font-size: 11.5px; fill: #555; }
+      .w5 { stroke: #d03a2f; stroke-width: 2.6; fill: none; }
+      .w33 { stroke: #e08a00; stroke-width: 2.2; fill: none; }
+      .gnd { stroke: #222; stroke-width: 2.2; fill: none; }
+      .sig { stroke: #2a62c9; stroke-width: 1.8; fill: none; }
+      .bat { stroke: #8b1d6a; stroke-width: 2.6; fill: none; }
+    </style>
+  </defs>
+
+  <text x="24" y="34" font-size="20" font-weight="600">PULSAR wiring — Freenove ESP32-S3-WROOM CAM build</text>
+  <text x="24" y="56" class="note">GPIOs match firmware/airsoft-scope/main/pins.h and Kconfig defaults. Keep all grounds common.</text>
+
+  <!-- Power chain -->
+  <rect x="24" y="90" width="150" height="70" class="box" fill="#f6e4ee"/>
+  <text x="38" y="114" class="h">1× 18650 cell</text>
+  <text x="38" y="134" class="note">in holder (rear shell bay)</text>
+  <text x="38" y="150" class="note">protected cell preferred</text>
+
+  <rect x="214" y="90" width="190" height="70" class="box" fill="#efe6f7"/>
+  <text x="228" y="114" class="h">Charger + 5 V boost</text>
+  <text x="228" y="134" class="note">USB-C charge port (right wall)</text>
+  <text x="228" y="150" class="note">≥1 A out, e.g. IP5306 / TP4056+MT3608</text>
+
+  <rect x="444" y="90" width="120" height="70" class="box" fill="#fbf3cf"/>
+  <text x="458" y="114" class="h">Power switch</text>
+  <text x="458" y="134" class="note">mini rocker,</text>
+  <text x="458" y="150" class="note">left wall</text>
+
+  <path class="bat" d="M174 115 H214"/>
+  <text x="180" y="108" class="pin">B+</text>
+  <path class="gnd" d="M174 140 H214"/>
+  <text x="180" y="156" class="pin">B−</text>
+  <path class="w5" d="M404 115 H444"/>
+  <text x="408" y="108" class="pin">5V</text>
+
+  <!-- 5 V bus -->
+  <path class="w5" d="M564 115 H610 V200"/>
+  <path class="w5" d="M270 200 H930"/>
+  <text x="616" y="192" class="pin" fill="#d03a2f">5 V bus</text>
+  <!-- GND bus -->
+  <path class="gnd" d="M309 160 V230"/>
+  <path class="gnd" d="M260 230 H930"/>
+  <text x="616" y="246" class="pin">GND bus</text>
+  <g fill="#222">
+    <circle cx="309" cy="230" r="3.5"/><circle cx="268" cy="230" r="3.5"/>
+    <circle cx="324" cy="230" r="3.5"/><circle cx="720" cy="230" r="3.5"/>
+  </g>
+  <g fill="#d03a2f">
+    <circle cx="610" cy="200" r="3.5"/><circle cx="280" cy="200" r="3.5"/>
+    <circle cx="316" cy="200" r="3.5"/>
+  </g>
+
+  <!-- ESP board -->
+  <rect x="330" y="300" width="300" height="300" class="box" fill="#e3f1e6"/>
+  <text x="346" y="326" class="h">Freenove ESP32-S3-WROOM CAM</text>
+  <text x="346" y="344" class="note">OV2640 camera on board · USB-C left wall</text>
+  <g class="pin">
+    <text x="346" y="374">5V</text>
+    <text x="346" y="396">GND</text>
+    <text x="346" y="448">GPIO14  RX ←</text>
+    <text x="346" y="470">GPIO1   TX →</text>
+    <text x="346" y="500">GPIO3   ADC (bat)</text>
+    <text x="346" y="530">GPIO21  button A</text>
+    <text x="346" y="552">GPIO47  button B</text>
+    <text x="520" y="374">GPIO39 SCLK</text>
+    <text x="520" y="396">GPIO40 MOSI</text>
+    <text x="520" y="418">GPIO38 CS</text>
+    <text x="520" y="440">GPIO42 DC</text>
+    <text x="520" y="462">GPIO41 RST</text>
+    <text x="520" y="484">GPIO2  BLK</text>
+  </g>
+  <text x="346" y="586" class="note">No microSD card (pins 38–40 are reused).</text>
+
+  <!-- ESP power: diode from 5 V bus -->
+  <path class="w5" d="M316 200 V370 H340"/>
+  <polygon points="316,300 308,286 324,286" fill="#d03a2f"/>
+  <line x1="306" y1="301" x2="326" y2="301" stroke="#d03a2f" stroke-width="2"/>
+  <text x="258" y="292" class="note" text-anchor="end">SS14 Schottky</text>
+  <text x="258" y="306" class="note" text-anchor="end">(stops USB back-feed)</text>
+  <path class="gnd" d="M324 230 V392 H340"/>
+
+  <!-- LD2450 -->
+  <rect x="24" y="400" width="190" height="130" class="box" fill="#fdebd6"/>
+  <text x="38" y="424" class="h">HLK-LD2450 radar</text>
+  <g class="pin">
+    <text x="38" y="450">5V</text>
+    <text x="38" y="472">GND</text>
+    <text x="38" y="494">TX</text>
+    <text x="38" y="516">RX</text>
+  </g>
+  <path class="w5" d="M280 200 V445 H214"/>
+  <path class="gnd" d="M268 230 V467 H214"/>
+  <path class="sig" d="M214 489 H300 V444 H340"/>
+  <path class="sig" d="M214 511 H312 V466 H340"/>
+  <text x="38" y="552" class="note">470 µF + 100 nF across 5V/GND at the radar</text>
+  <text x="38" y="568" class="note">TX→GPIO14, RX←GPIO1 (crossed), 256000 baud</text>
+
+  <!-- Display -->
+  <rect x="700" y="300" width="230" height="200" class="box" fill="#dde6f7"/>
+  <text x="714" y="324" class="h">ST7789V 2.0" display</text>
+  <g class="pin">
+    <text x="840" y="370">SCL</text>
+    <text x="840" y="392">SDA</text>
+    <text x="840" y="414">CS</text>
+    <text x="840" y="436">DC</text>
+    <text x="840" y="458">RES</text>
+    <text x="840" y="480">BLK</text>
+    <text x="728" y="350">VCC ← 3V3</text>
+    <text x="728" y="372">GND ← bus</text>
+  </g>
+  <path class="sig" d="M630 370 H836"/>
+  <path class="sig" d="M630 392 H836"/>
+  <path class="sig" d="M630 414 H836"/>
+  <path class="sig" d="M630 436 H836"/>
+  <path class="sig" d="M630 458 H836"/>
+  <path class="sig" d="M630 480 H836"/>
+  <text x="520" y="506" class="pin">3V3 out</text>
+  <path class="w33" d="M630 502 H676 V346 H724"/>
+  <text x="640" y="520" class="pin" fill="#e08a00">3V3</text>
+  <path class="gnd" d="M720 230 V300"/>
+
+  <!-- Buttons -->
+  <rect x="700" y="520" width="230" height="80" class="box" fill="#fbf3cf"/>
+  <text x="714" y="544" class="h">Buttons (top of rear shell)</text>
+  <text x="714" y="564" class="note">A = MODE (left)  · B = ADJUST (right)</text>
+  <text x="714" y="582" class="note">each: GPIO ↔ button ↔ GND (internal pull-up)</text>
+  <path class="sig" d="M500 526 H660 V560 H700"/>
+  <path class="sig" d="M500 548 H648 V572 H700"/>
+
+  <!-- Battery sense -->
+  <rect x="24" y="580" width="270" height="44" class="box" fill="#f6e4ee"/>
+  <text x="38" y="600" class="note">Optional gauge: B+ → 100k → GPIO3 → 100k → GND,</text>
+  <text x="38" y="616" class="note">100 nF at GPIO3. Enable "Battery voltage monitor".</text>
+  <path class="bat" d="M294 600 H322 V496 H340"/>
+</svg>
