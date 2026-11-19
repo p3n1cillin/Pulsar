@@ -25,6 +25,12 @@ OV2640/OV3660 --DVP-->  live RGB565 frame
 | Freenove ESP32-S3-WROOM CAM | Compute + camera | ESP32-S3 N16R8 (8 MB octal PSRAM), onboard OV2640/OV3660 |
 | HLK-LD2450 | 24 GHz mmWave radar | up to 3 targets, X/Y in mm, 256000 baud, 5 V supply |
 | ST7789V SPI TFT | Rear operator display | 240×320 panel, driven 320×240 landscape (rotatable) |
+| 2× 7 mm buttons, rocker switch, 18650 + charger/boost | Controls and power | see [`hardware/housing`](hardware/housing/) |
+
+A printable, support-free housing with a Picatinny quick-detach clamp and an
+M-LOK→Picatinny adapter (e.g. for a Tokyo Marui MWS) lives in
+[`hardware/housing/`](hardware/housing/), with an exploded assembly diagram,
+wiring diagram, and Bambu print settings.
 
 The OV2640 camera is integrated on the Freenove board. The radar and display are
 wired to the GPIOs below (see [`firmware/airsoft-scope/main/pins.h`](firmware/airsoft-scope/main/pins.h)).
@@ -48,6 +54,10 @@ wired to the GPIOs below (see [`firmware/airsoft-scope/main/pins.h`](firmware/ai
 | RX | 1 (ESP TX) | config commands only |
 | 5V | 5V | radar needs 5 V |
 | GND | GND | common ground |
+
+**Controls** (active-low to GND, internal pull-ups): button A / MODE on GPIO 21,
+button B / ADJUST on GPIO 47. Optional battery sense on GPIO 3 (ADC1) through a
+100k/100k divider.
 
 > The display reuses the freed microSD pins (38/39/40) — **do not insert a microSD card**.
 > Camera GPIOs (4–18), octal-PSRAM GPIOs (33–37), and flash GPIOs (26–32) are reserved.
@@ -73,6 +83,21 @@ idf.py -p COM7 flash monitor
 | Display rotation | 0/90/180/270 | Match the mounted orientation (90/270 = portrait) |
 | Camera HFOV | 66° | Calibrate to align blips with the image |
 | Min range | 120 cm | Ignores close self-clutter near the muzzle |
+| Camera mirror / flip | on / on | Match the camera orientation in your housing |
+| Radar link timeout | 1000 ms | Live mode shows **NO RADAR** when the LD2450 goes silent |
+| Housing buttons | on, GPIO 21 / 47 | Brightness, declutter, boresight calibration |
+| Battery monitor | off | GPIO 3 + divider; adds a battery gauge to the HUD |
+
+### Operator controls
+
+| Button | Short press | Long press |
+|---|---|---|
+| A (MODE) | Cycle brightness 15/40/70/100% | Enter boresight calibration / save and exit |
+| B (ADJUST) | Declutter: show radar-backed contacts only | In calibration: reset to the menuconfig default |
+
+In calibration a dashed boresight line and `CAL +x.x` readout appear; A and B
+move the radar bearing by ∓0.5°. Brightness, declutter, and the boresight
+offset persist in NVS across power cycles.
 
 In **Simulation** mode the firmware generates moving synthetic targets and renders
 the radar-only scope view (reticle + blips) plus an ASCII preview on the serial monitor.
@@ -99,31 +124,50 @@ cd firmware/airsoft-scope
 idf.py build
 ```
 
-`tracking_tests` covers target association/fusion/coasting and overlay
-projection; `ld2450_tests` covers the pure LD2450 byte-stream parser in
+`tracking_tests` covers target association/fusion/coasting;
+`overlay_tests` covers the pinhole projection, declutter filter, and HUD
+rendering bounds; `controls_tests` covers button debounce/long-press, the
+brightness/declutter/calibration state machine, and the battery gauge; `ld2450_tests` covers the pure LD2450 byte-stream parser in
 `firmware/airsoft-scope/main/ld2450_parser.c` (frame decode + sign handling,
 split feeds, garbage resync, overflow safety); `camera_motion_tests` covers the
 grid motion detector (`camera_motion.c`, via `tests/stub/sdkconfig.h`) including
-static-scene suppression, blob detection, and global-motion rejection.
+static-scene suppression, blob detection, global-motion rejection,
+big-endian RGB565 decoding, and rectilinear off-axis bearings.
 
-GitHub Actions runs the host tests and builds both the default offline profile
-and a feature-complete camera, live-radar, and authenticated-stream profile.
+The housing generator verifies its own fit (electronics keep-outs, insertion
+paths, clamp clearance):
+
+```powershell
+cd hardware/housing
+python -m venv .venv
+.venv\Scripts\pip install -r requirements.txt
+.venv\Scripts\python pulsar_housing.py
+```
+
+GitHub Actions runs the host tests, the housing fit checks, and builds both the
+default offline profile and a feature-complete camera, live-radar,
+battery-monitor, and authenticated-stream profile.
 
 ## Firmware layout
 
 ```text
 firmware/airsoft-scope/main/
-  main.c            Boot, mode selection, render loop
+  main.c            Boot, mode selection, render loop, radar-link watchdog
   ld2450.c          LD2450 UART reader (timestamps frames)
   ld2450_parser.c   Pure LD2450 byte-stream parser (host-tested)
   camera_motion.c   Grid motion detector -> bearing-only observations
   target_tracker.c  Radar/camera fusion into persistent tracks
-  radar_overlay.c   Track bearing/range -> screen projection
-  overlay_draw.c    Orange contact markers (rings + crosshair)
+  camera_model.h    Shared pinhole camera model (bearing <-> pixel)
+  radar_overlay.c   Track bearing/range -> screen projection, declutter
+  overlay_draw.c    Contact markers, 3x5 font, status HUD
+  scope_controls.c  Buttons, NVS settings, battery ADC
+  scope_controls_logic.c  Button/calibration state machine (host-tested)
+  button_input.c    Debounce + short/long press (host-tested)
+  battery_gauge.c   18650 voltage -> percent (host-tested)
   scope_camera.c    OV2640/OV3660 DVP capture (RGB565, PSRAM)
   scope_ui.c        Framebuffer compositor, rotation, serial preview
   web_stream.c      Optional authenticated MJPEG debug stream
-  st7789.c          ST7789V SPI display driver (esp_lcd)
+  st7789.c          ST7789V SPI display driver (esp_lcd), PWM backlight
   sim_radar.c       Synthetic targets for bench development
   scope_types.h     Shared frame/track/detection types
   pins.h            GPIO map for the Freenove S3-CAM build

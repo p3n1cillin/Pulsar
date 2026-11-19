@@ -8,3 +8,7 @@ firmware/airsoft-scope/sdkconfig.old
 # Editor / OS
 *.swp
 .DS_Store
+
+# Housing generator
+__pycache__/
+hardware/housing/.venv/

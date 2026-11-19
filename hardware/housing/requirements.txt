@@ -1,0 +1,4 @@
+manifold3d==3.5.5
+numpy>=1.26
+# render_views.py only
+matplotlib>=3.8
