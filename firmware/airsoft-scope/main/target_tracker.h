@@ -51,6 +51,10 @@ void target_tracker_init(
     target_tracker_t *tracker,
     const target_tracker_config_t *config);
 
+// Change the radar-to-camera bearing offset at runtime (boresight
+// calibration). Applies to radar observations from the next update onward.
+void target_tracker_set_boresight(target_tracker_t *tracker, float boresight_deg);
+
 // Each non-NULL input is treated as one new sensor observation. Call with NULL
 // for a sensor that has not produced a fresh frame since the previous update.
 void target_tracker_update(

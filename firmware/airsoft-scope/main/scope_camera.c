@@ -15,6 +15,17 @@ static camera_fb_t *held_frame;
 
 #if CONFIG_AIRSOFT_CAMERA_BOARD_S3_CAM
 
+#if CONFIG_AIRSOFT_CAMERA_VFLIP
+#define CAMERA_VFLIP 1
+#else
+#define CAMERA_VFLIP 0
+#endif
+#if CONFIG_AIRSOFT_CAMERA_HMIRROR
+#define CAMERA_HMIRROR 1
+#else
+#define CAMERA_HMIRROR 0
+#endif
+
 static camera_config_t s3_cam_config(void) {
     camera_config_t config = {
         .pin_pwdn = -1,
@@ -61,8 +72,10 @@ esp_err_t scope_camera_init(void) {
 
     sensor_t *sensor = esp_camera_sensor_get();
     if (sensor) {
-        sensor->set_vflip(sensor, 1);
-        sensor->set_hmirror(sensor, 1);
+        // Orientation depends on how the camera ribbon is folded in the
+        // housing; both are menuconfig options so no code change is needed.
+        sensor->set_vflip(sensor, CAMERA_VFLIP);
+        sensor->set_hmirror(sensor, CAMERA_HMIRROR);
     }
 
     camera_ready = true;

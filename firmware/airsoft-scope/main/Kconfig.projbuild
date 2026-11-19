@@ -123,6 +123,21 @@ config AIRSOFT_CAMERA_BOARD_S3_CAM
 
 endchoice
 
+config AIRSOFT_CAMERA_HMIRROR
+    bool "Mirror camera image horizontally"
+    depends on AIRSOFT_CAMERA_BOARD_S3_CAM
+    default y
+    help
+        Match the image to the operator's left/right. Toggle if contacts and
+        the scene move in opposite directions when you pan the scope.
+
+config AIRSOFT_CAMERA_VFLIP
+    bool "Flip camera image vertically"
+    depends on AIRSOFT_CAMERA_BOARD_S3_CAM
+    default y
+    help
+        Toggle if the live feed is upside down for your camera mounting.
+
 config AIRSOFT_CAMERA_MOTION_TRACKING
     bool "Track moving camera regions"
     depends on AIRSOFT_CAMERA_BOARD_S3_CAM
@@ -179,6 +194,66 @@ config AIRSOFT_STREAM_TOKEN
         Required value for the HTTP Authorization header as "Bearer TOKEN".
         The stream refuses to start when this token is empty. Keep the generated
         sdkconfig local; it is excluded from version control.
+
+config AIRSOFT_RADAR_LINK_TIMEOUT_MS
+    int "Radar link timeout (ms)"
+    depends on AIRSOFT_SCOPE_MODE_LIVE
+    range 300 5000
+    default 1000
+    help
+        Show a "NO RADAR" warning when no LD2450 frame arrives for this long.
+        The module streams ~10 frames/s even with no targets, so silence means
+        a wiring, power, or baud-rate fault rather than an empty room.
+
+config AIRSOFT_CONTROLS
+    bool "Housing buttons (brightness, declutter, boresight calibration)"
+    default y
+    help
+        Two momentary buttons to GND with internal pull-ups. Safe to leave
+        enabled with no buttons fitted: idle pins read as released.
+
+config AIRSOFT_BUTTON_MODE_GPIO
+    int "MODE button GPIO (A)"
+    depends on AIRSOFT_CONTROLS
+    range 0 48
+    default 21
+
+config AIRSOFT_BUTTON_ADJUST_GPIO
+    int "ADJUST button GPIO (B)"
+    depends on AIRSOFT_CONTROLS
+    range 0 48
+    default 47
+
+config AIRSOFT_BUTTON_LONG_PRESS_MS
+    int "Long-press threshold (ms)"
+    depends on AIRSOFT_CONTROLS
+    range 400 3000
+    default 900
+
+config AIRSOFT_BATTERY_SENSE
+    bool "Battery voltage monitor"
+    default n
+    help
+        Read the 1S Li-ion cell through a resistor divider on an ADC1 pin and
+        show a battery gauge on the HUD. Needs the divider fitted.
+
+config AIRSOFT_BATTERY_ADC_GPIO
+    int "Battery sense GPIO (ADC1 only)"
+    depends on AIRSOFT_BATTERY_SENSE
+    range 1 10
+    default 3
+    help
+        GPIO3 is the only free ADC1 pin on the Freenove S3-CAM build (GPIO1 is
+        the radar UART, GPIO2 the backlight, 4-10 the camera).
+
+config AIRSOFT_BATTERY_DIVIDER_X100
+    int "Battery divider ratio x100"
+    depends on AIRSOFT_BATTERY_SENSE
+    range 100 1000
+    default 200
+    help
+        Cell voltage / pin voltage, times 100. 200 = two equal resistors
+        (e.g. 100k / 100k).
 
 config AIRSOFT_MIN_RANGE_M
     int "Ignore radar contacts closer than (cm)"

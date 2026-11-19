@@ -464,3 +464,9 @@ void target_tracker_update(
     }
     make_snapshot(tracker, now_us, out);
 }
+
+void target_tracker_set_boresight(target_tracker_t *tracker, float boresight_deg) {
+    if (tracker) {
+        tracker->config.radar_boresight_deg = boresight_deg;
+    }
+}

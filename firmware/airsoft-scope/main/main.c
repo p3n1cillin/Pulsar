@@ -9,6 +9,7 @@
 #include "ld2450.h"
 #include "radar_overlay.h"
 #include "scope_camera.h"
+#include "scope_controls.h"
 #include "scope_types.h"
 #include "scope_ui.h"
 #include "sim_radar.h"
@@ -23,6 +24,49 @@ static target_tracker_t player_tracker;
 static camera_motion_state_t camera_motion;
 static uint64_t last_radar_processed_us;
 static uint64_t last_serial_preview_us;
+static uint64_t last_radar_frame_us;
+
+// LD2450 streams ~10 frames/s even with no targets, so silence means a wiring,
+// power or baud fault. Give the module a moment to boot before flagging it.
+#define RADAR_BOOT_GRACE_US 3000000ULL
+
+static bool radar_link_lost(uint64_t last_frame_us, uint64_t now_us) {
+#if CONFIG_AIRSOFT_SCOPE_MODE_LIVE
+    if (last_frame_us == 0) {
+        return now_us > RADAR_BOOT_GRACE_US;
+    }
+    return now_us - last_frame_us >
+        (uint64_t)CONFIG_AIRSOFT_RADAR_LINK_TIMEOUT_MS * 1000ULL;
+#else
+    (void)last_frame_us;
+    (void)now_us;
+    return false;
+#endif
+}
+
+// Pull operator settings, push boresight changes into the tracker, and build
+// the HUD for this frame. Runs on the render task, which owns the tracker.
+static void prepare_frame_controls(uint64_t now_us, scope_hud_t *hud, bool *declutter) {
+    static int16_t applied_boresight_decideg = INT16_MIN;
+    scope_controls_status_t status;
+    scope_controls_get(&status);
+    if (status.settings.boresight_decideg != applied_boresight_decideg) {
+        applied_boresight_decideg = status.settings.boresight_decideg;
+        target_tracker_set_boresight(
+            &player_tracker, (float)applied_boresight_decideg / 10.0f);
+    }
+    *hud = (scope_hud_t){
+        .radar_lost = radar_link_lost(last_radar_frame_us, now_us),
+        .blink_phase = ((now_us / 250000ULL) & 1ULL) != 0,
+        .calibrating = status.settings.calibrating,
+        .boresight_deg = (float)status.settings.boresight_decideg / 10.0f,
+        .declutter = status.settings.declutter,
+        .battery_valid = status.battery_valid,
+        .battery_percent = status.battery_percent,
+    };
+    // Calibration needs every contact visible; declutter only applies outside it.
+    *declutter = status.settings.declutter && !status.settings.calibrating;
+}
 
 static void on_radar_frame(const airsoft_radar_frame_t *frame, void *context) {
     (void)context;
@@ -62,6 +106,12 @@ static void render_task(void *arg) {
         if (radar_is_new) {
             last_radar_processed_us = frame.updated_us;
         }
+        if (frame.updated_us != 0) {
+            last_radar_frame_us = frame.updated_us;
+        }
+        scope_hud_t hud;
+        bool declutter = false;
+        prepare_frame_controls(now_us, &hud, &declutter);
 
         int width = CONFIG_AIRSOFT_DISPLAY_WIDTH;
         int height = CONFIG_AIRSOFT_DISPLAY_HEIGHT;
@@ -89,7 +139,10 @@ static void render_task(void *arg) {
                 (float)CONFIG_AIRSOFT_CAMERA_HFOV_DEG,
                 (float)CONFIG_AIRSOFT_MAX_RANGE_M,
                 &overlay);
-            scope_ui_composite(&overlay, live_pixels, width, height);
+            if (declutter) {
+                radar_overlay_declutter(&overlay);
+            }
+            scope_ui_composite(&overlay, &hud, live_pixels, width, height);
             scope_camera_release();
         } else {
             target_tracker_update(
@@ -105,7 +158,10 @@ static void render_task(void *arg) {
                 (float)CONFIG_AIRSOFT_CAMERA_HFOV_DEG,
                 (float)CONFIG_AIRSOFT_MAX_RANGE_M,
                 &overlay);
-            scope_ui_render_scope(&overlay);
+            if (declutter) {
+                radar_overlay_declutter(&overlay);
+            }
+            scope_ui_render_scope(&overlay, &hud);
         }
 
 #if CONFIG_AIRSOFT_SERIAL_PREVIEW
@@ -128,6 +184,9 @@ void app_main(void) {
         return;
     }
     ESP_ERROR_CHECK(scope_ui_init(CONFIG_AIRSOFT_DISPLAY_WIDTH, CONFIG_AIRSOFT_DISPLAY_HEIGHT));
+    if (scope_controls_init() != ESP_OK) {
+        ESP_LOGW(TAG, "controls unavailable; using saved/default settings");
+    }
     if (scope_camera_init() != ESP_OK) {
         ESP_LOGW(TAG, "camera unavailable; using radar-only scope view");
     }

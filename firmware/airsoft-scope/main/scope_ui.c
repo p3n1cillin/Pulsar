@@ -46,10 +46,7 @@ void scope_ui_panel_snapshot_release(void) {
 }
 
 static inline uint16_t rgb565(uint8_t r, uint8_t g, uint8_t b) {
-    // ST7789 over SPI expects big-endian 16-bit pixels; byte-swap so the
-    // little-endian framebuffer is read back in the right order.
-    const uint16_t v = (uint16_t)(((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3));
-    return (uint16_t)((v >> 8) | (v << 8));
+    return overlay_rgb565(r, g, b);
 }
 
 static void fb_fill(uint16_t *fb, int w, int h, uint16_t color) {
@@ -186,6 +183,7 @@ esp_err_t scope_ui_init(int width, int height) {
 
 void scope_ui_composite(
     const airsoft_overlay_t *overlay,
+    const scope_hud_t *hud,
     uint16_t *live_frame,
     int live_width,
     int live_height) {
@@ -199,13 +197,20 @@ void scope_ui_composite(
         memcpy(ui_fb, live_frame, (size_t)ui_width * (size_t)ui_height * sizeof(uint16_t));
         overlay_draw_contacts(
             ui_fb, ui_width, ui_height, overlay, (float)CONFIG_AIRSOFT_MAX_RANGE_M);
+        overlay_draw_hud(ui_fb, ui_width, ui_height, hud);
         present(ui_fb);
         xSemaphoreGive(s_frame_lock);
+    } else if (live_width != ui_width || live_height != ui_height) {
+        static bool warned;
+        if (!warned) {
+            ESP_LOGW(TAG, "camera frame %dx%d does not match %dx%d render size; dropping frames",
+                     live_width, live_height, ui_width, ui_height);
+            warned = true;
+        }
     }
-
 }
 
-void scope_ui_render_scope(const airsoft_overlay_t *overlay) {
+void scope_ui_render_scope(const airsoft_overlay_t *overlay, const scope_hud_t *hud) {
     if (!overlay || !ui_fb) {
         return;
     }
@@ -216,6 +221,7 @@ void scope_ui_render_scope(const airsoft_overlay_t *overlay) {
     draw_reticle(ui_fb, ui_width, ui_height);
     overlay_draw_contacts(
         ui_fb, ui_width, ui_height, overlay, (float)CONFIG_AIRSOFT_MAX_RANGE_M);
+    overlay_draw_hud(ui_fb, ui_width, ui_height, hud);
     present(ui_fb);
     xSemaphoreGive(s_frame_lock);
 }

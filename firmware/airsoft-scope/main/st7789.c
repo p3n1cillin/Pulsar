@@ -1,6 +1,7 @@
 #include <stdbool.h>
 
 #include "driver/gpio.h"
+#include "driver/ledc.h"
 #include "driver/spi_master.h"
 #include "esp_check.h"
 #include "esp_lcd_panel_io.h"
@@ -23,7 +24,17 @@ static const char *TAG = "st7789";
 #define ST7789_NATIVE_H 320
 #define ST7789_MAX_PX (ST7789_NATIVE_W * ST7789_NATIVE_H)
 
+// Backlight PWM. esp32-camera owns LEDC timer 0 / channel 0 for XCLK, so the
+// backlight uses timer 1 / channel 1 to avoid retuning the camera clock.
+#define BL_LEDC_MODE LEDC_LOW_SPEED_MODE
+#define BL_LEDC_TIMER LEDC_TIMER_1
+#define BL_LEDC_CHANNEL LEDC_CHANNEL_1
+#define BL_LEDC_RESOLUTION LEDC_TIMER_10_BIT
+#define BL_LEDC_MAX_DUTY ((1U << 10) - 1U)
+#define BL_LEDC_FREQ_HZ 20000  // above audible range; no coil whine
+
 static esp_lcd_panel_handle_t s_panel;
+static bool s_backlight_pwm;
 static int s_width;
 static int s_height;
 static bool s_ready;
@@ -41,13 +52,35 @@ int st7789_panel_height(void) {
 }
 
 esp_err_t st7789_init(void) {
-    // Backlight on (steady). BL can also be tied to 3V3 in hardware.
-    const gpio_config_t bk_cfg = {
-        .mode = GPIO_MODE_OUTPUT,
-        .pin_bit_mask = 1ULL << AIRSOFT_PIN_LCD_BL,
+    // Backlight starts fully on; scope_controls applies the saved level.
+    const ledc_timer_config_t bl_timer = {
+        .speed_mode = BL_LEDC_MODE,
+        .duty_resolution = BL_LEDC_RESOLUTION,
+        .timer_num = BL_LEDC_TIMER,
+        .freq_hz = BL_LEDC_FREQ_HZ,
+        .clk_cfg = LEDC_AUTO_CLK,
     };
-    ESP_RETURN_ON_ERROR(gpio_config(&bk_cfg), TAG, "backlight gpio");
-    gpio_set_level(AIRSOFT_PIN_LCD_BL, 1);
+    const ledc_channel_config_t bl_channel = {
+        .gpio_num = AIRSOFT_PIN_LCD_BL,
+        .speed_mode = BL_LEDC_MODE,
+        .channel = BL_LEDC_CHANNEL,
+        .intr_type = LEDC_INTR_DISABLE,
+        .timer_sel = BL_LEDC_TIMER,
+        .duty = BL_LEDC_MAX_DUTY,
+        .hpoint = 0,
+    };
+    s_backlight_pwm = ledc_timer_config(&bl_timer) == ESP_OK &&
+        ledc_channel_config(&bl_channel) == ESP_OK;
+    if (!s_backlight_pwm) {
+        // Fall back to a steady backlight so the display is still usable.
+        ESP_LOGW(TAG, "backlight PWM unavailable; using fixed full brightness");
+        const gpio_config_t bk_cfg = {
+            .mode = GPIO_MODE_OUTPUT,
+            .pin_bit_mask = 1ULL << AIRSOFT_PIN_LCD_BL,
+        };
+        ESP_RETURN_ON_ERROR(gpio_config(&bk_cfg), TAG, "backlight gpio");
+        gpio_set_level(AIRSOFT_PIN_LCD_BL, 1);
+    }
 
     const spi_bus_config_t bus_cfg = {
         .sclk_io_num = AIRSOFT_PIN_LCD_SCLK,
@@ -125,4 +158,16 @@ esp_err_t st7789_blit(const uint16_t *framebuffer) {
         return ESP_ERR_INVALID_STATE;
     }
     return esp_lcd_panel_draw_bitmap(s_panel, 0, 0, s_width, s_height, framebuffer);
+}
+
+void st7789_set_backlight(uint8_t percent) {
+    if (!s_backlight_pwm) {
+        return;
+    }
+    if (percent > 100) {
+        percent = 100;
+    }
+    const uint32_t duty = (BL_LEDC_MAX_DUTY * (uint32_t)percent + 50U) / 100U;
+    ledc_set_duty(BL_LEDC_MODE, BL_LEDC_CHANNEL, duty);
+    ledc_update_duty(BL_LEDC_MODE, BL_LEDC_CHANNEL);
 }

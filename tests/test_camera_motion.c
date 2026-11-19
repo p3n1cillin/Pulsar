@@ -33,6 +33,13 @@ static void assert_near(
     }
 }
 
+// Pixels in esp32-camera wire order (big-endian RGB565), as the detector sees
+// them on the device.
+static uint16_t wire_rgb565(unsigned r5, unsigned g6, unsigned b5) {
+    const uint16_t native = (uint16_t)((r5 << 11) | (g6 << 5) | b5);
+    return (uint16_t)((native >> 8) | (native << 8));
+}
+
 static uint16_t *make_frame(uint16_t color) {
     uint16_t *pixels = malloc((size_t)WIDTH * (size_t)HEIGHT * sizeof(uint16_t));
     if (!pixels) {
@@ -143,8 +150,47 @@ static void test_degenerate_inputs_are_rejected(void) {
     free(frame);
 }
 
+// Regression: decoding wire-order pixels as native little-endian turned a
+// 2-LSB green flicker (sensor noise, ~5 luma levels) into a ~20-level jump on
+// the red channel and produced phantom visual tracks.
+static void test_green_lsb_noise_is_not_motion(void) {
+    camera_motion_state_t state;
+    airsoft_camera_frame_t out;
+    uint16_t *grey = make_frame(wire_rgb565(16, 32, 16));
+    uint16_t *noisy = make_frame(wire_rgb565(16, 32, 16));
+    fill_cells(noisy, 10, 10, 15, 15, wire_rgb565(16, 34, 16));
+
+    run_two_frames(&state, grey, noisy, &out);
+    ASSERT_TRUE(out.count == 0);
+    ASSERT_TRUE(!out.global_motion);
+
+    free(grey);
+    free(noisy);
+}
+
+// Off-axis bearings follow the pinhole model, matching radar_overlay's
+// projection so radar and camera observations of one player agree.
+static void test_off_axis_bearing_is_rectilinear(void) {
+    camera_motion_state_t state;
+    airsoft_camera_frame_t out;
+    uint16_t *dark = make_frame(0x0000);
+    uint16_t *with_player = make_frame(0x0000);
+    fill_cells(with_player, 32, 13, 35, 16, 0xFFFF);  // centre at x = 272 px
+
+    run_two_frames(&state, dark, with_player, &out);
+    ASSERT_TRUE(out.count == 1);
+    const float focal = 160.0f / tanf(33.0f * 3.14159265f / 180.0f);
+    const float expected = atanf((272.0f - 160.0f) / focal) * 180.0f / 3.14159265f;
+    ASSERT_NEAR(out.detections[0].bearing_deg, expected, 0.3f);  // ~24.4 deg
+
+    free(dark);
+    free(with_player);
+}
+
 int main(void) {
     test_static_scene_yields_nothing();
+    test_green_lsb_noise_is_not_motion();
+    test_off_axis_bearing_is_rectilinear();
     test_moving_square_is_detected_centred();
     test_half_frame_change_flags_global_motion();
     test_degenerate_inputs_are_rejected();
